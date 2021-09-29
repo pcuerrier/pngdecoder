@@ -4,7 +4,7 @@
         {
             "type": "shell",
             "label": "C/C++: Build",
-            "command": "./build.bat",
+            "command": "build.bat",
             "args": [],
             "options": {
                 "cwd": "${workspaceFolder}"
