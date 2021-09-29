@@ -1,5 +1,7 @@
 https://pyokagan.name/blog/2019-10-14-png/
 https://medium.com/@duhroach/how-png-works-f1174e3cc7b7
+https://handmade.network/forums/articles/t/2822-tutorial_implementing_a_basic_png_reader_the_handmade_way
+https://www.euccas.me/zlib/
 http://www.schaik.com/pngsuite/
 
 Supported color-types are:
