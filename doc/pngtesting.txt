@@ -1,4 +1,5 @@
 https://pyokagan.name/blog/2019-10-14-png/
+https://medium.com/@duhroach/how-png-works-f1174e3cc7b7
 http://www.schaik.com/pngsuite/
 
 Supported color-types are:
