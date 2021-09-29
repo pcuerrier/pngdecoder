@@ -9,6 +9,7 @@
 #endif
 
 static constexpr uint32_t IHDR_HEADER = 'I' << 24 | 'H' << 16 | 'D' << 8 | 'R' << 0;
+static constexpr uint32_t gAMA_HEADER = 'g' << 24 | 'A' << 16 | 'M' << 8 | 'A' << 0;
 static constexpr uint32_t IDAT_HEADER = 'I' << 24 | 'D' << 16 | 'A' << 8 | 'T' << 0;
 static constexpr uint32_t IEND_HEADER = 'I' << 24 | 'E' << 16 | 'N' << 8 | 'D' << 0;
 
@@ -223,20 +224,32 @@ int WINAPI WinMain( HINSTANCE instance, HINSTANCE prevInstance, PSTR cmdLine, in
 
             switch (chunk.type)
             {
-                case IDAT_HEADER:
+                case IHDR_HEADER:
                 {
                     const uint8_t* cursor = (const uint8_t*)chunk.data;
-                    metadata.width = (uint32_t)(*cursor);
+                    metadata.width = readInt(cursor);
                     cursor += 4;
                     
-                    metadata.height = (uint32_t)(*cursor);
+                    metadata.height = readInt(cursor);
                     cursor += 4;
 
-                    metadata.bitDepth    = cursor[0];
-                    metadata.colorType   = cursor[1];
-                    metadata.compression = cursor[2];
-                    metadata.filter      = cursor[3];
-                    metadata.interlace   = cursor[4];
+                    metadata.bitDepth    = readByte(cursor);
+                    ++cursor;
+                    metadata.colorType   = readByte(cursor);
+                    ++cursor;
+                    metadata.compression = readByte(cursor);
+                    ++cursor;
+                    metadata.filter      = readByte(cursor);
+                    ++cursor;
+                    metadata.interlace   = readByte(cursor);
+                    ++cursor;
+                } break;
+
+                case gAMA_HEADER:
+                {
+                    const uint8_t* cursor = (const uint8_t*)chunk.data;
+                    metadata.gamma = readInt(cursor);
+                    cursor += 4;
                 } break;
             }
 
