@@ -8,6 +8,8 @@
 #define Assert(expression)
 #endif
 
+#define SKIP_BYTES(mem, byte_num) (mem += byte_num);
+
 static constexpr uint32_t IHDR_HEADER = 'I' << 24 | 'H' << 16 | 'D' << 8 | 'R' << 0;
 static constexpr uint32_t gAMA_HEADER = 'g' << 24 | 'A' << 16 | 'M' << 8 | 'A' << 0;
 static constexpr uint32_t IDAT_HEADER = 'I' << 24 | 'D' << 16 | 'A' << 8 | 'T' << 0;
@@ -76,29 +78,50 @@ struct PngMetadata
     uint32_t gamma;
 };
 
-constexpr uint8_t readByte( const void* ptr, const uint32_t offset = 0 )
+struct PngBitStream
+{
+    uint8_t* dataStream;
+    uint32_t bitBuffer;
+    uint32_t bitsRemaining;
+};
+
+struct ZlibBlock
+{
+    uint8_t        compressionMethod;
+    uint8_t        extraFlags;
+    const uint8_t* data;
+    uint16_t       checkValue; // Adler32
+};
+
+constexpr uint8_t readInt8( const void* ptr, const uint32_t offset = 0 )
 {
     return ((const uint8_t*)ptr)[offset];
 }
 
-constexpr uint32_t readInt( const void* ptr )
+constexpr uint32_t readInt16( const void* ptr )
 {
-    return static_cast<uint32_t>(readByte( ptr, 0 )) << 24 |
-           static_cast<uint32_t>(readByte( ptr, 1 )) << 16 |
-           static_cast<uint32_t>(readByte( ptr, 2 )) <<  8 |
-           static_cast<uint32_t>(readByte( ptr, 3 )) <<  0;
+    return static_cast<uint32_t>(readInt8( ptr, 0 )) <<  8 |
+           static_cast<uint32_t>(readInt8( ptr, 1 )) <<  0;
 }
 
-constexpr uint64_t readLong( const void* ptr )
+constexpr uint32_t readInt32( const void* ptr )
 {
-    return static_cast<uint64_t>(readByte( ptr, 0 )) << 56 |
-           static_cast<uint64_t>(readByte( ptr, 1 )) << 48 |
-           static_cast<uint64_t>(readByte( ptr, 2 )) << 40 |
-           static_cast<uint64_t>(readByte( ptr, 3 )) << 32 |
-           static_cast<uint64_t>(readByte( ptr, 4 )) << 24 |
-           static_cast<uint64_t>(readByte( ptr, 5 )) << 16 |
-           static_cast<uint64_t>(readByte( ptr, 6 )) <<  8 |
-           static_cast<uint64_t>(readByte( ptr, 7 )) <<  0;
+    return static_cast<uint32_t>(readInt8( ptr, 0 )) << 24 |
+           static_cast<uint32_t>(readInt8( ptr, 1 )) << 16 |
+           static_cast<uint32_t>(readInt8( ptr, 2 )) <<  8 |
+           static_cast<uint32_t>(readInt8( ptr, 3 )) <<  0;
+}
+
+constexpr uint64_t readInt64( const void* ptr )
+{
+    return static_cast<uint64_t>(readInt8( ptr, 0 )) << 56 |
+           static_cast<uint64_t>(readInt8( ptr, 1 )) << 48 |
+           static_cast<uint64_t>(readInt8( ptr, 2 )) << 40 |
+           static_cast<uint64_t>(readInt8( ptr, 3 )) << 32 |
+           static_cast<uint64_t>(readInt8( ptr, 4 )) << 24 |
+           static_cast<uint64_t>(readInt8( ptr, 5 )) << 16 |
+           static_cast<uint64_t>(readInt8( ptr, 6 )) <<  8 |
+           static_cast<uint64_t>(readInt8( ptr, 7 )) <<  0;
 }
 
 /* https://lxp32.github.io/docs/a-simple-example-crc32-calculation/ */
@@ -117,7 +140,7 @@ const uint32_t crc32_fast(const uint8_t* memory, size_t n)
 
 constexpr bool checkPNGSign( const void* memory )
 {
-    return readLong( memory ) == 0x89504E470D0A1A0A;
+    return readInt64( memory ) == 0x89504E470D0A1A0A;
 } 
 const PngChunk readChunk( const void* ptr )
 {
@@ -125,17 +148,76 @@ const PngChunk readChunk( const void* ptr )
 
     const uint8_t* byte = (const uint8_t*)ptr;
 
-    result.lenght = readInt( byte );
-    byte += 4;
+    result.lenght = readInt32( byte );
+    SKIP_BYTES(byte, 4);
 
-    result.type = readInt( byte );
+    result.type = readInt32( byte );
     result.crc_data = byte;
-    byte += 4;
+    SKIP_BYTES(byte, 4);
 
     result.data = byte;
-    byte += result.lenght;
+    SKIP_BYTES(byte, result.lenght);
 
-    result.crc = readInt( byte );
+    result.crc = readInt32( byte );
+
+    return result;
+}
+
+const ZlibBlock readZlibBlock( const uint8_t* memory, uint32_t lenght )
+{
+    ZlibBlock result = {};
+
+    result.compressionMethod = *memory;
+    SKIP_BYTES(memory, 1);
+
+    result.extraFlags = *memory;
+    SKIP_BYTES(memory, 1);
+
+    result.data = memory;
+    SKIP_BYTES(memory, lenght - 2);
+
+    result.checkValue = readInt16(memory);
+    SKIP_BYTES(memory, 2);
+}
+
+// function that will make sure we have the required number of bits inside bit buffer
+void PngGetBits(PngBitStream* bits, uint32_t bitsRequired)
+{
+    //this is an extremely stupid way to make sure the unsigned integer doesn't underflow, this is just a replacement for abs() but on unsigned integers.
+    uint32_t extraBitsNeeded = (bits->bitsRemaining > bitsRequired) ? (bits->bitsRemaining - bitsRequired) : (bitsRequired - bits->bitsRemaining);
+    uint32_t bytesToRead = extraBitsNeeded / 8;
+
+    //because the above is integer division, there is a possibility of bits to be remaining, i.e: imagine extra_bits_needed is 14, if you do integer division by 8, you get 1, but an extra 6 bits remain 
+    if(extraBitsNeeded % 8) { //do we have any remaining bits?
+        //if we do have extra bits they won't be more than 8 bits, so we will add one extra byte for those bits and we are good to go
+        bytesToRead++; 
+    }
+
+    for(uint32_t i = 0; i < bytesToRead; ++i) {
+        uint32_t byte = *bits->dataStream++;
+        bits->bitBuffer |= byte << (i*8 + bits->bitsRemaining); //we need to be careful to not overwrite the remaining bits if any
+    }
+
+    bits->bitsRemaining += bytesToRead * 8;
+}
+
+uint32_t PngReadBits(PngBitStream* bits, uint32_t bitsToRead)
+{
+    uint32_t result = 0;
+
+    if (bitsToRead > bits->bitsRemaining)
+    {
+        PngGetBits(bits, bitsToRead);
+    }
+
+    for (uint32_t i = 0; i < bitsToRead; ++i)
+    {
+        uint32_t bit = bits->bitBuffer & (1 << i);
+        result |= bit;
+    }
+
+    bits->bitBuffer >>= bitsToRead;
+    bits->bitsRemaining-= bitsToRead;
 
     return result;
 }
@@ -226,30 +308,39 @@ int WINAPI WinMain( HINSTANCE instance, HINSTANCE prevInstance, PSTR cmdLine, in
             {
                 case IHDR_HEADER:
                 {
-                    const uint8_t* cursor = (const uint8_t*)chunk.data;
-                    metadata.width = readInt(cursor);
-                    cursor += 4;
+                    const uint8_t* byte = (const uint8_t*)chunk.data;
+                    metadata.width = readInt32(byte);
+                    SKIP_BYTES(byte, 4);
                     
-                    metadata.height = readInt(cursor);
-                    cursor += 4;
+                    metadata.height = readInt32(byte);
+                    SKIP_BYTES(byte, 4);
 
-                    metadata.bitDepth    = readByte(cursor);
-                    ++cursor;
-                    metadata.colorType   = readByte(cursor);
-                    ++cursor;
-                    metadata.compression = readByte(cursor);
-                    ++cursor;
-                    metadata.filter      = readByte(cursor);
-                    ++cursor;
-                    metadata.interlace   = readByte(cursor);
-                    ++cursor;
+                    metadata.bitDepth    = readInt8(byte);
+                    SKIP_BYTES(byte, 1);
+                    metadata.colorType   = readInt8(byte);
+                    SKIP_BYTES(byte, 1);
+                    metadata.compression = readInt8(byte);
+                    SKIP_BYTES(byte, 1);
+                    metadata.filter      = readInt8(byte);
+                    SKIP_BYTES(byte, 1);
+                    metadata.interlace   = readInt8(byte);
+                    SKIP_BYTES(byte, 1);
                 } break;
 
                 case gAMA_HEADER:
                 {
-                    const uint8_t* cursor = (const uint8_t*)chunk.data;
-                    metadata.gamma = readInt(cursor);
-                    cursor += 4;
+                    const uint8_t* byte = (const uint8_t*)chunk.data;
+                    metadata.gamma = readInt32(byte);
+                    SKIP_BYTES(byte, 4);
+                } break;
+
+                case IDAT_HEADER:
+                {
+                    // Join All IDAT
+
+                    // Decompress data
+                    const ZlibBlock zlib = readZlibBlock((const uint8_t*)chunk.data, chunk.lenght);
+
                 } break;
             }
 
