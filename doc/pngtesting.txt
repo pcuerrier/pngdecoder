@@ -1,0 +1,193 @@
+https://pyokagan.name/blog/2019-10-14-png/
+http://www.schaik.com/pngsuite/
+
+Supported color-types are:
+grayscale
+grayscale + alpha-channel
+color palettes
+rgb
+rgb + alpha-channel
+Allowed bit-depths are depending on the color-type, but are in the range of 1-bit (grayscale, which is b&w) upto 16-bits.
+
+Special features are:
+
+interlacing (Adam-7)
+gamma-support
+transparency (a poor-man's alpha solution)
+File naming
+Where possible, the test-files are 32x32 bits icons. This results in a still reasonable size of the suite even with a large number of tests. The name of each test-file reflects the type in the following way:
+    filename:                               g04i2c08.png
+                                            || ||||
+    test feature (in this case gamma) ------+| ||||
+    parameter of test (here gamma-value) ----+ ||||
+    interlaced or non-interlaced --------------+|||
+    color-type (numerical) ---------------------+||
+    color-type (descriptive) --------------------+|
+    bit-depth ------------------------------------+
+    
+color-type:
+
+0g - grayscale
+2c - rgb color
+3p - paletted
+4a - grayscale + alpha channel
+6a - rgb color + alpha channel
+bit-depth:
+01 - with color-type 0, 3
+02 - with color-type 0, 3
+04 - with color-type 0, 3
+08 - with color-type 0, 2, 3, 4, 6
+16 - with color-type 0, 2, 4, 6
+interlacing:
+n - non-interlaced
+i - interlaced
+ basic	
+Basic formats
+These are basic test images in all of the standard PNG b/w, color and paletted formats.
+[ PngSuite - basic / PNG-files | PngSuite - basic / GIF-files ]
+
+ interlacing	
+Interlacing
+These are the same basic test images but now using Adam-7 interlacing.
+[ PngSuite - interlaced / PNG-files | PngSuite - interlaced / GIF-files ]
+
+ sizes	
+Odd sizes
+These tests are there to check if your software handles pictures well, with less obvious picture sizes. This is particularly important with Adam-7 type interlacing. In the same way these tests check if pictures size 1 x 1 and similar are ok.
+[ PngSuite - sizes / PNG-files | PngSuite - sizes / GIF-files ]
+
+ background	
+Background colors
+When the PNG file contains a background chunk, this should be used for pictures with alpha-channel or pictures with a transparency chunk. For pictures without this background-chunk, but with alpha, this test-set assumes a black background.
+For the images in this test, the left-side should be 100% the background color, where moving to the right the color should gradually become the image pattern.
+
+bga - alpha + no background
+bgw - alpha + white background
+bgg - alpha + gray background
+bgb - alpha + black background
+bgy - alpha + yellow background
+[ PngSuite - background / PNG-files | PngSuite - background / GIF-files ]
+
+ transparency	
+Transparency
+Transparency should be used together with a background chunk. To test the combination of the two the latter 4 tests are there. How to handle pictures with transparency, but without a background, opinions can differ. Here we use black, but especially in the case of paletted images, the normal color would maybe even be better.
+tbw - transparent + white background
+tbg - transparent + gray background
+tbb - transparent + black background
+tby - transparent + yellow background
+tp0 - not transparent for reference
+tp1 - transparent, but no background chunk
+tm3 - multiple levels of transparency, 3 entries
+[ PngSuite - transparency / PNG-files | PngSuite - transparency / GIF-files ]
+
+ gamma	
+Gamma values
+To test if your viewer handles gamma-correction, (3x) 6 test-files are available. They contain corrected color-ramps and a corresponding gamma-chunk with the file-gamma value. These are created in such a way that when the viewer does the gamma correction right, all 6 should be displayed identical.
+If they are different, probably the gamma correction is omitted. In that case, have a look at the two right columns in the 6 pictures. The image where those two look the same (when looked from far) reflects the gamma of your system. However, because of the limited size of the image, you should do more elaborate tests to determine your display gamma.
+
+For comparisons, three pages with GIF images are available. Depending on the display gamma of your system, select the NeXT-, the Mac- or the PC-version.
+
+g03 - file-gamma = 0.35, for display with gamma = 2.8
+g04 - file-gamma = 0.45, for display with gamma = 2.2 (PC)
+g05 - file-gamma = 0.55, for display with gamma = 1.8 (Mac)
+g07 - file-gamma = 0.70, for display with gamma = 1.4
+g10 - file-gamma = 1.00, for display with gamma = 1.0 (NeXT)
+g25 - file-gamma = 2.50, for display with gamma = 0.4
+[ PngSuite - gamma / PNG-files | PngSuite - gamma / GIF-files (PC) |
+| PngSuite - gamma / GIF-files (Mac) | PngSuite - gamma / GIF-files (NeXT) ]
+
+ filtering	
+Image filtering
+PNG uses file-filtering, for optimal compression. Normally the type is of filtering is adjusted to the contents of the picture, but here each file has the same picture, with a different filtering.
+f0 - no filtering
+f1 - sub filtering
+f2 - up filtering
+f3 - average filtering
+f4 - paeth filtering
+[ PngSuite - filters / PNG-files | PngSuite - filters / GIF-files ]
+
+ palette	
+Additional palettes
+Besides the normal use of paletted images, palette chunks can in combination with true-color (and other) images also be used to select color lookup-tables when the video system is of limited capabilities. The suggested palette chunk is specially created for this purpose.
+pp - normal palette chunk
+ps - suggested palette chunk
+[ PngSuite - filters / PNG-files | PngSuite - filters / GIF-files ]
+
+ ancillary	
+Ancillary chunks
+To test the correct decoding of ancillary chunks, these test-files contain one or more examples of these chunks. Depending on the type of chunk, a number of typical values are selected to test. Unluckily, the test-set can not contain all combinations, because that would be an endless set.
+The significant bits are used in files with the next higher bit-depth. They indicate how many bits are valid.
+
+cs3 - 3 significant bits
+cs5 - 5 significant bits
+cs8 - 8 significant bits (reference)
+cs3 - 13 significant bits
+For the physical pixel dimensions, the result of each decoding should be a square picture. The first (cdf) image is an example of flat (horizontal) pixels, where the pHYS chunk (x is 1 per unit, y = 4 per unit) must take care of the correction. The second is just the other way round. The last example uses the unit specifier, for 1000 pixels per meter. This should result in a picture of 3.2 cm square.
+
+cdf - physical pixel dimensions, 8x32 flat pixels
+cdh - physical pixel dimensions, 32x8 high pixels
+cds - physical pixel dimensions, 8x8 square pixels
+cdu - physical pixel dimensions, with unit-specifier
+The chromaticity chunk defines the rgb and whitepoint coordinates according to the 1931 CIE Committee XYZ color space.
+
+ccw - primary chromaticities and white point
+PNG files can contain a chunk giving a histogram of the colors in the image.
+
+ch1 - histogram 15 colors
+ch2 - histogram 256 colors
+The time chunk specifies when the picture last was modified (or created).
+
+cm7 - modification time, 01-jan-1970
+cm9 - modification time, 31-dec-1999
+cm0 - modification time, 01-jan-2000
+In the textual chunk, a number of the standard and some non-standard text items are included. Text can optionally be compressed.
+
+ct0 - no textual data
+ct1 - with textual data
+ctz - with compressed textual data
+cte - UTF-8 international text - english
+ctf - UTF-8 international text - finnish
+ctg - UTF-8 international text - greek
+cth - UTF-8 international text - hindi
+ctj - UTF-8 international text - japanese
+The exif chunk was added to PNG in 2017 to contain exif data typically added by digital cameras to JPEG images.
+
+exif - image attributes
+[ PngSuite - chunks / PNG-files | PngSuite - chunks / GIF-files ]
+
+ order	
+Chunk ordering
+These testfiles will test the obligatory ordering relations between various chunk types (not yet) as well as the number of data chunks used for the image.
+oi1 - mother image with 1 idat-chunk
+oi2 - image with 2 idat-chunks
+oi4 - image with 4 unequal sized idat-chunks
+oi9 - all idat-chunks of length one
+[ PngSuite - order / PNG-files | PngSuite - order / GIF-files ]
+
+ compression	
+Zlib compression level
+Here you will find a set of images compressed by zlib, ranging from level 0 for no compression at maximum speed upto level 9 for maximum compression.
+z00 - zlib compression level 0 - none
+z03 - zlib compression level 1
+z06 - zlib compression level 2 - default
+z09 - zlib compression level 9 - maximum
+[ PngSuite - compression / PNG-files | PngSuite - compression / GIF-files ]
+
+ corrupted	
+Corrupted files
+All these files are invalid PNG images. When decoding they should generate appropriate error-messages.
+xs1 - signature byte 1 MSBit reset to zero
+xs2 - signature byte 2 is a 'Q'
+xs4 - signature byte 4 lowercase
+xs7 - 7th byte a space instead of control-Z
+xcr - added cr bytes
+xlf - added lf bytes
+xhd - incorrect IHDR checksum
+xc1 - color type 1
+xc9 - color type 9
+xd0 - bit-depth 0
+xd3 - bit-depth 3
+xd9 - bit-depth 99
+xdt - missing IDAT chunk
+xcs - incorrect IDAT checksum
+[ PngSuite - corrupt / PNG-files | PngSuite - corrupt / GIF-files ]
