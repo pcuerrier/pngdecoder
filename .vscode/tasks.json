@@ -4,7 +4,7 @@
         {
             "type": "shell",
             "label": "C/C++: Build",
-            "command": "build.bat",
+            "command": "premake5 gmake2 && make",
             "args": [],
             "options": {
                 "cwd": "${workspaceFolder}"

@@ -4,6 +4,8 @@ https://handmade.network/forums/articles/t/2822-tutorial_implementing_a_basic_pn
 https://www.euccas.me/zlib/
 http://www.schaik.com/pngsuite/
 
+https://www.nayuki.io/page/png-file-chunk-inspector
+
 Supported color-types are:
 grayscale
 grayscale + alpha-channel

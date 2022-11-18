@@ -1,6 +1,5 @@
 #include <cstdint>
 #include <cstdio>
-#include <Windows.h>
 
 #ifdef _DEBUG
 #define Assert(expression) if(!(expression)) {*(int *)0 = 0;} // DebugBreak()?
@@ -49,12 +48,6 @@ static uint32_t crc32_table[256] =
     0xaed16a4a,0xd9d65adc,0x40df0b66,0x37d83bf0,0xa9bcae53,0xdebb9ec5,0x47b2cf7f,0x30b5ffe9,
     0xbdbdf21c,0xcabac28a,0x53b39330,0x24b4a3a6,0xbad03605,0xcdd70693,0x54de5729,0x23d967bf,
     0xb3667a2e,0xc4614ab8,0x5d681b02,0x2a6f2b94,0xb40bbe37,0xc30c8ea1,0x5a05df1b,0x2d02ef8d
-};
-
-struct ReadResult
-{
-    uint32_t contentSize;
-    void* content;
 };
 
 struct PngChunk
@@ -125,23 +118,25 @@ constexpr uint64_t readInt64( const void* ptr )
 }
 
 /* https://lxp32.github.io/docs/a-simple-example-crc32-calculation/ */
-const uint32_t crc32_fast(const uint8_t* memory, size_t n)
+uint32_t crc32_fast(const uint8_t* memory, size_t n)
 {
     uint32_t crc = 0xFFFFFFFF;
 
-	for(size_t i = 0; i < n; i++) {
-		uint8_t ch = memory[i];
-		uint32_t t = (ch^crc) & 0xFF;
-		crc = (crc >> 8) ^ crc32_table[t];
-	}
+    for(size_t i = 0; i < n; i++)
+    {
+        uint8_t ch = memory[i];
+        uint32_t t = (ch^crc) & 0xFF;
+        crc = (crc >> 8) ^ crc32_table[t];
+    }
 
-	return ~crc;
+    return ~crc;
 }
 
 constexpr bool checkPNGSign( const void* memory )
 {
     return readInt64( memory ) == 0x89504E470D0A1A0A;
-} 
+}
+
 const PngChunk readChunk( const void* ptr )
 {
     PngChunk result = {};
@@ -178,6 +173,8 @@ const ZlibBlock readZlibBlock( const uint8_t* memory, uint32_t lenght )
 
     result.checkValue = readInt16(memory);
     SKIP_BYTES(memory, 2);
+
+    return result;
 }
 
 // function that will make sure we have the required number of bits inside bit buffer
@@ -222,146 +219,7 @@ uint32_t PngReadBits(PngBitStream* bits, uint32_t bitsToRead)
     return result;
 }
 
-inline uint32_t safeTruncateUInt64(uint64_t value)
+int main( int /* argc */, char** /* argv */ )
 {
-    Assert(value <= 0xFFFFFFFF);
-    uint32_t result = (uint32_t)value;
-    return result;
-}
-
-void  freeFileMemory(void* memory)
-{
-    if (memory)
-    {
-        VirtualFree(memory, 0, MEM_RELEASE);
-    }
-}
-
-ReadResult readEntirefile(char* filename)
-{
-    ReadResult result = {};
-
-    HANDLE fileHandle = CreateFileA(
-        filename,
-        GENERIC_READ,
-        FILE_SHARE_READ,
-        NULL,
-        OPEN_EXISTING,
-        NULL,
-        NULL);
-
-    if (fileHandle != INVALID_HANDLE_VALUE)
-    {
-        LARGE_INTEGER fileSize;
-        if (GetFileSizeEx(fileHandle, &fileSize))
-        {
-            result.content = VirtualAlloc(0, fileSize.QuadPart, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-
-            if (result.content)
-            {
-                uint32_t fileSize32 = safeTruncateUInt64(fileSize.QuadPart);
-                DWORD bytesRead = 0;
-                if (ReadFile(fileHandle, result.content, fileSize32, &bytesRead, NULL))
-                {
-                    result.contentSize = fileSize32;
-                }
-                else
-                {
-                    freeFileMemory(result.content);
-                    result.content = 0;
-                    result.contentSize = 0;
-                }
-            }
-        }
-
-        CloseHandle(fileHandle);
-    }
-    
-    return result;
-}
-
-int WINAPI WinMain( HINSTANCE instance, HINSTANCE prevInstance, PSTR cmdLine, int cmdShow )
-{
-    // TODO: Open File (Get bitstream)
-    ReadResult file = readEntirefile("data/basi0g01.png");
-
-    // TODO: Parse bitstream
-    if ( !checkPNGSign( file.content ) ) 
-    {
-        printf("Error: Invalid PNG signature!\n");
-    }
-    else
-    {
-        const uint8_t* ptr = (const uint8_t*)file.content + 8;
-        PngMetadata metadata = {};
-
-        while ( ptr < ((const uint8_t*)file.content + file.contentSize) )
-        {
-            const PngChunk chunk = readChunk( ptr );
-
-            if ( crc32_fast((const uint8_t*)chunk.crc_data, chunk.lenght + 4) != chunk.crc )
-            {
-                printf("CRC failed...\n");
-            }
-
-            switch (chunk.type)
-            {
-                case IHDR_HEADER:
-                {
-                    const uint8_t* byte = (const uint8_t*)chunk.data;
-                    metadata.width = readInt32(byte);
-                    SKIP_BYTES(byte, 4);
-                    
-                    metadata.height = readInt32(byte);
-                    SKIP_BYTES(byte, 4);
-
-                    metadata.bitDepth    = readInt8(byte);
-                    SKIP_BYTES(byte, 1);
-                    metadata.colorType   = readInt8(byte);
-                    SKIP_BYTES(byte, 1);
-                    metadata.compression = readInt8(byte);
-                    SKIP_BYTES(byte, 1);
-                    metadata.filter      = readInt8(byte);
-                    SKIP_BYTES(byte, 1);
-                    metadata.interlace   = readInt8(byte);
-                    SKIP_BYTES(byte, 1);
-                } break;
-
-                case gAMA_HEADER:
-                {
-                    const uint8_t* byte = (const uint8_t*)chunk.data;
-                    metadata.gamma = readInt32(byte);
-                    SKIP_BYTES(byte, 4);
-                } break;
-
-                case IDAT_HEADER:
-                {
-                    // Join All IDAT
-
-                    // Decompress data
-                    const ZlibBlock zlib = readZlibBlock((const uint8_t*)chunk.data, chunk.lenght);
-
-                } break;
-            }
-
-            ptr += chunk.lenght + 4 + 4 + 4;
-        }
-    }
-
-    /*for(uint32_t i=0;i<256;i++) {
-		uint32_t ch=i;
-		uint32_t crc=0;
-		for(size_t j=0;j<8;j++) {
-			uint32_t b=(ch^crc)&1;
-			crc>>=1;
-			if(b) crc=crc^0xEDB88320;
-			ch>>=1;
-		}
-		crc32_table[i]=crc;
-        printf("%08x\n",crc);
-	}*/
-
-    // TODO: Display decoded image
-
     return 0;
 }

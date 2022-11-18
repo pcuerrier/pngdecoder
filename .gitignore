@@ -1,5 +1,6 @@
 # Builds
-build/
+bin/
+bin-int/
 
 # Prerequisites
 *.d

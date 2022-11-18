@@ -1,0 +1,6 @@
+[submodule "external/premake"]
+	path = external/premake
+	url = https://github.com/premake/premake-core.git
+[submodule "external/googletest"]
+	path = external/googletest
+	url = https://github.com/google/googletest.git
