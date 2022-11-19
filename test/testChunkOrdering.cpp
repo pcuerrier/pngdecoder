@@ -30,12 +30,12 @@ TEST(ChunkOrdering, 06_Color_4_IDAT_Chunk_Unequal)
     checkPng("data/oi4n2c16.png");
 }
 
-TEST(ChunkOrdering, 07_Grayscale_Multiple_IDAT_Lenght_1)
+TEST(ChunkOrdering, 07_Grayscale_Multiple_IDAT_length_1)
 {
     checkPng("data/oi9n0g16.png");
 }
 
-TEST(ChunkOrdering, 08_Color_Multiple_IDAT_Lenght_1)
+TEST(ChunkOrdering, 08_Color_Multiple_IDAT_length_1)
 {
     checkPng("data/oi9n2c16.png");
 }

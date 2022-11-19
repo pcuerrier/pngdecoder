@@ -52,7 +52,7 @@ static uint32_t crc32_table[256] =
 
 struct PngChunk
 {
-    uint32_t    lenght;
+    uint32_t    length;
     uint32_t    type;
     const void* data;
     uint32_t    crc;
@@ -143,7 +143,7 @@ const PngChunk readChunk( const void* ptr )
 
     const uint8_t* byte = (const uint8_t*)ptr;
 
-    result.lenght = readInt32( byte );
+    result.length = readInt32( byte );
     SKIP_BYTES(byte, 4);
 
     result.type = readInt32( byte );
@@ -151,14 +151,14 @@ const PngChunk readChunk( const void* ptr )
     SKIP_BYTES(byte, 4);
 
     result.data = byte;
-    SKIP_BYTES(byte, result.lenght);
+    SKIP_BYTES(byte, result.length);
 
     result.crc = readInt32( byte );
 
     return result;
 }
 
-const ZlibBlock readZlibBlock( const uint8_t* memory, uint32_t lenght )
+const ZlibBlock readZlibBlock( const uint8_t* memory, uint32_t length )
 {
     ZlibBlock result = {};
 
@@ -169,7 +169,7 @@ const ZlibBlock readZlibBlock( const uint8_t* memory, uint32_t lenght )
     SKIP_BYTES(memory, 1);
 
     result.data = memory;
-    SKIP_BYTES(memory, lenght - 2);
+    SKIP_BYTES(memory, length - 2);
 
     result.checkValue = readInt16(memory);
     SKIP_BYTES(memory, 2);

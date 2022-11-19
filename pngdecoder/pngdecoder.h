@@ -12,7 +12,8 @@ enum PNGErrorCode
     PNG_MISSING_HEADER,
     PNG_INVALID_BYTE,
     PNG_INVALID_COLOR_TYPE,
-    PNG_INVALID_BIT_DEPTH
+    PNG_INVALID_BIT_DEPTH,
+    PNG_INVALID_CHUNK_ORDER
 };
 
 #pragma pack(push, 1)
@@ -23,7 +24,7 @@ struct PngHeader
 
 struct PngChunkHeader
 {
-    uint32_t lenght;
+    uint32_t length;
     union
     {
         uint32_t typeU32;
@@ -45,6 +46,11 @@ struct PngIHDR
     uint8_t compressionMethod;
     uint8_t filterMethod;
     uint8_t interlaceMethod;
+};
+
+struct PngGAMA
+{
+    uint32_t gamma;
 };
 
 struct PngResult
